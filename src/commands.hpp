@@ -25,10 +25,5 @@ namespace kms {
 			int look = 0;
 			return "";
 		}
-
-
 	};
-
-
-
 }

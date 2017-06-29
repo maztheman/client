@@ -1,58 +1,72 @@
 #pragma once
-#include <deque>
+#include <queue>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 
 //full of platform specific stuff
 namespace kms {
-
-template<class T>
+	template <typename T>
 	class concurrent_queue
 	{
-		CRITICAL_SECTION	_cs;
-		std::deque<T>		_queue;
-		HANDLE				_sema;
 	public:
-		concurrent_queue()
-			: _sema(NULL)
-		{
-			InitializeCriticalSection(&_cs);
-			_sema = ::CreateSemaphore(NULL, 0, MAXINT, NULL);
-		}
 
-		~concurrent_queue()
+		T pop()
 		{
-			DeleteCriticalSection(&_cs);
-			CloseHandle(_sema);
-		}
-
-		void push(T val)
-		{
-			EnterCriticalSection(&_cs);
-			_queue.push_front(val);
-			LeaveCriticalSection(&_cs);
-			ReleaseSemaphore(_sema, 1, NULL);
-		}
-
-		void pop(T* val)
-		{
-			if (WAIT_OBJECT_0 == ::WaitForSingleObject(_sema, INFINITE)) {
-				EnterCriticalSection(&_cs);
-				*val = _queue.back();
-				_queue.pop_back();
-				LeaveCriticalSection(&_cs);
+			std::unique_lock<std::mutex> mlock(mutex_);
+			while (queue_.empty())
+			{
+				cond_.wait(mlock);
 			}
+			auto item = queue_.front();
+			queue_.pop();
+			return item;
 		}
 
-		bool try_pop(T* val, long timeout = 50)
+		bool try_pop(T* item, std::chrono::milliseconds timeout = std::chrono::milliseconds(50))
 		{
-			if (WAIT_OBJECT_0 == ::WaitForSingleObject(_sema, timeout)) {
-				EnterCriticalSection(&_cs);
-				*val = _queue.back();
-				_queue.pop_back();
-				LeaveCriticalSection(&_cs);
+			std::unique_lock<std::mutex> mlock(mutex_);
+			if (queue_.empty()) {
+				return false;
+			}
+			if (cond_.wait_for(mlock, timeout) == std::cv_status::no_timeout) {
+				*item = queue_.front();
+				queue_.pop();
 				return true;
 			}
 			return false;
 		}
-	};
 
+		void pop(T& item)
+		{
+			std::unique_lock<std::mutex> mlock(mutex_);
+			while (queue_.empty())
+			{
+				cond_.wait(mlock);
+			}
+			item = queue_.front();
+			queue_.pop();
+		}
+
+		void push(const T& item)
+		{
+			std::unique_lock<std::mutex> mlock(mutex_);
+			queue_.push(item);
+			mlock.unlock();
+			cond_.notify_one();
+		}
+
+		void push(T&& item)
+		{
+			std::unique_lock<std::mutex> mlock(mutex_);
+			queue_.push(std::move(item));
+			mlock.unlock();
+			cond_.notify_one();
+		}
+
+	private:
+		std::queue<T> queue_;
+		std::mutex mutex_;
+		std::condition_variable cond_;
+	};
 }
