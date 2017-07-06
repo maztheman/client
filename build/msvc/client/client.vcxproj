@@ -11,12 +11,16 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\..\..\src\atomicops.h" />
     <ClInclude Include="..\..\..\src\authentication.hpp" />
     <ClInclude Include="..\..\..\src\commands.hpp" />
     <ClInclude Include="..\..\..\src\concurrent_queue.hpp" />
     <ClInclude Include="..\..\..\src\console.hpp" />
+    <ClInclude Include="..\..\..\src\lua_script.h" />
     <ClInclude Include="..\..\..\src\platform.hpp" />
+    <ClInclude Include="..\..\..\src\readerwriterqueue.h" />
     <ClInclude Include="..\..\..\src\session.hpp" />
+    <ClInclude Include="..\..\..\src\Settings.h" />
     <ClInclude Include="..\..\..\src\socket.hpp" />
     <ClInclude Include="..\..\..\src\stdafx.h" />
     <ClInclude Include="..\..\..\src\targetver.h" />
@@ -26,6 +30,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\src\client.cpp" />
+    <ClCompile Include="..\..\..\src\commands.cpp" />
+    <ClCompile Include="..\..\..\src\lua_script.cpp" />
+    <ClCompile Include="..\..\..\src\Settings.cpp" />
     <ClCompile Include="..\..\..\src\stdafx.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -60,14 +67,18 @@
     <_ProjectFileVersion>15.0.26419.1</_ProjectFileVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
+    <OutDir>..\..\..\bin\</OutDir>
     <IntDir>$(Configuration)\</IntDir>
     <LinkIncremental>true</LinkIncremental>
+    <IncludePath>../../../contrib/include;$(IncludePath)</IncludePath>
+    <LibraryPath>../../../contrib/lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>..\..\..\bin\</OutDir>
     <IntDir>$(Configuration)\</IntDir>
     <LinkIncremental>false</LinkIncremental>
+    <IncludePath>../../../contrib/include;$(IncludePath)</IncludePath>
+    <LibraryPath>../../../contrib/lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

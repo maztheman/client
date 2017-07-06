@@ -23,7 +23,7 @@ namespace kms {
 			return item;
 		}
 
-		bool try_pop(T* item, std::chrono::milliseconds timeout = std::chrono::milliseconds(50))
+		bool try_pop(T* item, std::chrono::milliseconds timeout = std::chrono::milliseconds(25))
 		{
 			std::unique_lock<std::mutex> mlock(mutex_);
 			if (queue_.empty()) {

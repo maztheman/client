@@ -14,7 +14,6 @@ namespace kms {
 	struct true_type {};
 	struct false_type {};
 
-
 	struct _NoType
 	{
 
@@ -25,16 +24,12 @@ namespace kms {
 	{
 		typedef false_type null_arg;
 	};
-	
 
 	template<>
 	struct arg_trait<_NoType>
 	{
 		typedef true_type null_arg;
 	};
-
-
-
 
 	template<class Function, class Arg1 = _NoType, class Arg2 = _NoType>
 	class thread_t : public thread_base
@@ -106,32 +101,6 @@ namespace kms {
 		}
 	};
 
-	template<class Function, class Arg1, class Arg2>
-	class thread2_t : public thread_base
-	{
-		Function				m_func;
-		Arg1					m_arg1;
-		Arg2					m_arg2;
-
-		static DWORD WINAPI execute(LPVOID param)
-		{
-			thread2_t* const pThis = reinterpret_cast<thread2_t* const>(param);
-			pThis->m_func(pThis->m_arg1, pThis->m_arg2);
-			return 0;
-		}
-
-	public:
-
-		thread2_t(Function f, Arg1 arg1, Arg2 arg2)
-			: m_func(f)
-			, m_arg1(arg1)
-			, m_arg2(arg2)
-		{
-			m_handle = ::CreateThread(NULL, 0, &execute, this, 0, NULL);
-		}
-	};
-
-
 	template<class Function>
 	thread_base* make_thread(Function fn) {
 		return new thread_t<Function>(fn);
@@ -157,6 +126,4 @@ namespace kms {
 	thread_base* make_thread(Function fn, const Arg1& arg1, const Arg2& arg2) {
 		return new thread_t<Function, const Arg1&, const Arg2&>(fn, arg1, arg2);
 	}
-
-
 }

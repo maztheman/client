@@ -1,58 +1,29 @@
 #pragma once
 #include "socket.hpp"
 #include "telnet.hpp"
-#include "thread.hpp"
 #include "concurrent_queue.hpp"
 #include "console.hpp"
 #include "commands.hpp"
+#include "Settings.h"
 
 #include <iostream>
-
+#include <thread>
+#include <regex>
 
 namespace kms {
-	//wrap those memory resources
-	template<class T>
-	class unique_ptr_t {
-		T	m_handle;
-	public:
-		unique_ptr_t()
-			: m_handle((T)0)
-		{
-
-		}
-
-		unique_ptr_t(T new_handle) 
-			: m_handle(new_handle)
-		{
-
-		}
-		
-		unique_ptr_t& operator=(T new_handle) 
-		{
-			if (m_handle) {
-				throw std::exception("already assigned");
-			}
-			m_handle = new_handle;
-			return *this;
-		}
-
-		~unique_ptr_t()
-		{
-			if (m_handle) {
-				delete m_handle;
-				m_handle = (T)0;
-			}
-		}
-	};
 
 	class session_t {
+		typedef std::vector<lua_script_t*> lua_script_v;
+
+
 		kms::socket_t					m_socket;
 		kms::telnet_t					m_telnet;
-		unique_ptr_t<thread_base*>		m_readThread;
-		unique_ptr_t<thread_base*>		m_writeThread;
 		concurrent_queue<std::string>	m_bufferedWrite;
 		console_t						m_console;
 		commands_t						m_commands;
+		std::thread						m_recvThread;
+		std::thread						m_sendThread;
+		lua_script_v					m_aliases;
 		
 		static void readMud(session_t& session) {
 			CCharVector data(4096, 0);
@@ -72,7 +43,7 @@ namespace kms {
 				
 				//} else {
 					if (index > 0) {
-						if (session.m_telnet.process(data, index, session.m_console, session.m_bufferedWrite)) {
+						if (session.m_telnet.process(data, index, session.m_console, session.m_commands, session.m_bufferedWrite)) {
 							index = 0;
 							data.resize(4096, 0);
 						}
@@ -94,9 +65,6 @@ namespace kms {
 					//ugly.
 					unsigned char nTest = (unsigned char)sLine[0];
 					if (nTest == 255) {
-					} else if (nTest == '#') {
-						session.m_commands.process(sLine);
-						continue;
 					} else {
 						sLine += "\r\n";
 					}
@@ -114,6 +82,7 @@ namespace kms {
 
 		~session_t() 
 		{
+			ResetAlias();
 		}
 
 		bool connect(const std::string& sAddress, int nPort)
@@ -121,39 +90,56 @@ namespace kms {
 			return m_socket.connectTcp(sAddress, nPort);
 		}
 
+		void SendToServer(std::string sText)
+		{
+			m_bufferedWrite.push(sText);
+		}
+
 		void play()
 		{
-			//m_socket.setNonBlockingMode();
-
-			m_readThread = make_thread(&readMud, static_cast<session_t&>(*this));//  new recv_thread_t(&readMud, *this);
-			m_writeThread = make_thread(&writeMud, static_cast<session_t&>(*this));// new recv_thread_t(&writeMud, *this);
-			/*::Sleep(500);
-			m_bufferedWrite.push("mazaliasix");
-			m_bufferedWrite.push("y");
-			m_bufferedWrite.push("poopoo");
-			m_bufferedWrite.push("poopoo");
-			::Sleep(2000);
-			m_bufferedWrite.push("\r");
-			::Sleep(2000);
-			m_bufferedWrite.push("human");
-			::Sleep(2000);
-			m_bufferedWrite.push("Y");
-			::Sleep(2000);
-			m_bufferedWrite.push("M");
-			::Sleep(2000);
-			m_bufferedWrite.push("\r");
-			::Sleep(2000);
-			m_bufferedWrite.push("cle");
-			::Sleep(2000);
-			m_bufferedWrite.push("Y");
-			::Sleep(2000);
-			m_bufferedWrite.push("Y");*/
+			m_recvThread.swap(std::thread(readMud, std::ref(*this)));
+			m_sendThread.swap(std::thread(writeMud, std::ref(*this)));
 
 			std::string sInput;
 			while(1) {	
 				std::getline(std::cin, sInput);
-				m_bufferedWrite.push(sInput);
+				if (sInput == "exit") {
+					m_bufferedWrite.push("quit");
+					break;
+				} else if (sInput == "/reload") {
+					Settings::ReadInit();
+					continue;
+				}
+				bool rc = false;
+				//this is where alias should be processed man...
+				for (auto& alias : m_aliases) {
+					if (alias->OnIncoming(sInput)) {
+						rc = true;
+						break;
+					}
+				}
+
+				if (rc == false) {
+					m_bufferedWrite.push(sInput);
+				}
 			}
+		}
+
+		void AddAlias(const std::string& sCode, std::string sFunction)
+		{
+			m_aliases.push_back(new lua_script_t(sCode, sFunction));
+		}
+
+		void ResetAlias()
+		{
+			for (auto& p : m_aliases) {
+				delete p;
+			}
+			m_aliases.clear();
+		}
+
+		commands_t& Commands() {
+			return m_commands;
 		}
 	private:
 
@@ -162,4 +148,9 @@ namespace kms {
 	};
 
 
+}
+
+inline kms::session_t& Session() {
+	extern kms::session_t session;
+	return session;
 }

@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <sstream>
 #include "utility.hpp"
+#include "commands.hpp"
 
 namespace kms {
 	namespace command {
@@ -149,7 +150,7 @@ namespace kms {
 		{
 		}
 
-		size_t process(CCharVector& data, int size, console_t& console, concurrent_queue<std::string>& bufferedWrite)
+		size_t process(CCharVector& data, int size, console_t& console, commands_t& command, concurrent_queue<std::string>& bufferedWrite)
 		{
 			//deal with the telnet stuffs. then move on.
 			//ignore gracefully, for now....
@@ -204,7 +205,9 @@ namespace kms {
 
 			for(;ctrlCode != data.end();first = ctrlCode, ctrlCode = std::find(first, data.end(), control_code::esc)) {
 				if (ctrlCode > first) {
-					console.writeText(std::string(first, ctrlCode));
+					std::string sConsoleText(first, ctrlCode);
+					console.writeText(sConsoleText);
+					command.AddIncoming(sConsoleText);
 				} else {
 					if (ctrlCode == data.end()) break;
 					CCharVector::iterator cc1 = ++ctrlCode;
@@ -338,7 +341,9 @@ namespace kms {
 			}
 
 			if (first != data.end()) {
-				console.writeText(std::string(first, data.end()));
+				std::string sOutText(first, data.end());
+				console.writeText(sOutText);
+				command.AddIncoming(sOutText);
 			}
 
 			return 1;
