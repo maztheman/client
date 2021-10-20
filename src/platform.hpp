@@ -1,4 +1,8 @@
 #pragma once
+
+#include <utility>
+
+#ifdef _WIN32
 //this header is clearly for windows
 #include <winsock2.h>
 #include <Ws2tcpip.h>
@@ -36,11 +40,48 @@ namespace kms {
 	};
 }
 
+#else
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <netdb.h>
+#include <unistd.h>
+#include <cstring>
+
+namespace kms {
+	class socket_init
+	{
+		socket_init() = default;
+	public:
+		
+		static const socket_init& GetInstance()
+		{
+			static socket_init instance;
+			return instance;
+		}
+
+		bool GetIsValid() const {
+			return true;
+		}
+	};
+}
+
+#define SOCKET int
+#define INVALID_SOCKET -1
+#define SOCKET_ERROR -1
+
+#define closesocket close
+
+#define TIMEVAL timeval
+#define ioctlsocket ioctl
+
+#endif
+
 //REQUIRED: Initialize it.
 inline bool SocketInit() { return kms::socket_init::GetInstance().GetIsValid(); }
 
 typedef SOCKET					kms_socket_t;
-typedef HANDLE					native_handle_type;
 
 #define KMS_INVALID_SOCKET		INVALID_SOCKET
 #define KMS_SOCKET_ERROR		SOCKET_ERROR

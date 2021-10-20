@@ -488,7 +488,7 @@ namespace moodycamel
 		    Semaphore(int initialCount = 0)
 		    {
 		        assert(initialCount >= 0);
-		        sem_init(&m_sema, 0, initialCount);
+		        sem_init(&m_sema, 0, static_cast<unsigned int>(initialCount));
 		    }
 
 		    ~Semaphore()
@@ -519,11 +519,11 @@ namespace moodycamel
 			bool timed_wait(std::uint64_t usecs)
 			{
 				struct timespec ts;
-				const int usecs_in_1_sec = 1000000;
-				const int nsecs_in_1_sec = 1000000000;
+				const long usecs_in_1_sec = 1000000;
+				const long nsecs_in_1_sec = 1000000000;
 				clock_gettime(CLOCK_REALTIME, &ts);
-				ts.tv_sec += usecs / usecs_in_1_sec;
-				ts.tv_nsec += (usecs % usecs_in_1_sec) * 1000;
+				ts.tv_sec += static_cast<long>(usecs) / usecs_in_1_sec;
+				ts.tv_nsec += (static_cast<long>(usecs) % usecs_in_1_sec) * 1000L;
 				// sem_timedwait bombs if you have more than 1e9 in tv_nsec
 				// so we have to clean things up before passing it in
 				if (ts.tv_nsec > nsecs_in_1_sec) {
@@ -591,7 +591,7 @@ namespace moodycamel
 					m_sema.wait();
 					return true;
 				}
-				if (m_sema.timed_wait(timeout_usecs))
+				if (m_sema.timed_wait(static_cast<uint64_t>(timeout_usecs)))
 					return true;
 				// At this point, we've timed out waiting for the semaphore, but the
 				// count is still decremented indicating we may still be waiting on

@@ -49,7 +49,7 @@
 
 namespace moodycamel {
 
-template<typename T, size_t MAX_BLOCK_SIZE = 512>
+template<typename T, size_t MAX_BLOCK_SIZE = 512UL>
 class ReaderWriterQueue
 {
 	// Design: Based on a queue-of-queues. The low-level queues are just
@@ -77,7 +77,7 @@ public:
 	// allocations. If more than MAX_BLOCK_SIZE elements are requested,
 	// then several blocks of MAX_BLOCK_SIZE each are reserved (including
 	// at least one extra buffer block).
-	explicit ReaderWriterQueue(size_t maxSize = 15)
+	explicit ReaderWriterQueue(size_t maxSize = 15UL)
 #ifndef NDEBUG
 		: enqueuing(false)
 		,dequeuing(false)
@@ -597,7 +597,7 @@ private:
 
 		// size must be a power of two (and greater than 0)
 		Block(size_t const& _size, char* _rawThis, char* _data)
-			: front(0), localTail(0), tail(0), localFront(0), next(nullptr), data(_data), sizeMask(_size - 1), rawThis(_rawThis)
+			: front(0UL), localTail(0UL), tail(0UL), localFront(0UL), next(nullptr), data(_data), sizeMask(_size - 1UL), rawThis(_rawThis)
 		{
 		}
 

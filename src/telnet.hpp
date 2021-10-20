@@ -150,14 +150,14 @@ namespace kms {
 		{
 		}
 
-		size_t process(CCharVector& data, int size, console_t& console, commands_t& command, concurrent_queue<std::string>& bufferedWrite)
+		size_t process(CCharVector& data, size_t size, console_t& console, commands_t& command, concurrent_queue<std::string>& bufferedWrite)
 		{
 			//deal with the telnet stuffs. then move on.
 			//ignore gracefully, for now....
-			for(CCharVector::iterator termCode = std::find(data.begin(), data.end(), (char)command::iac);termCode != data.end(); termCode = std::find(data.begin(), data.end(), (char)command::iac)) {
+			for(CCharVector::iterator termCode = std::find(data.begin(), data.end(), static_cast<char>(command::iac));termCode != data.end(); termCode = std::find(data.begin(), data.end(), static_cast<char>(command::iac))) {
 				if (termCode != data.end()) {
-					size_t dist = std::distance(data.begin(), termCode);
-					if (static_cast<int>(dist + 1) >= size) return 0;//dere is moar
+					auto dist = std::distance(data.begin(), termCode);
+					if (std::cmp_greater_equal(dist + 1, size)) return 0;//dere is moar
 
 					command::command cmd = static_cast<command::command>(*++termCode);
 					option::option opt = static_cast<option::option>(*++termCode);
@@ -176,7 +176,7 @@ namespace kms {
 						}
 					} else if (cmd == command::option_do) {
 						if (opt == option::terminal_type) {
-							CCharVector buffy(11, 0);
+							CU8Vector buffy(11, 0);
 							buffy[0] = command::iac;
 							buffy[1] = command::sb;
 							buffy[2] = option::terminal_type;
@@ -463,8 +463,10 @@ namespace kms {
 				case display_esc_sequence::bg_default:
 					m_eInternalBuffer &= (~(terminal_attrib::bg_red | terminal_attrib::bg_green | terminal_attrib::bg_blue | terminal_attrib::bg_bold) & terminal_attrib::mask);
 					break;
+					default:
+					//somethings are not supported yet
+					break;
 				}
-
 			}
 
 			//super hacky
@@ -482,7 +484,7 @@ namespace kms {
 
 		void sendCommand(concurrent_queue<std::string>& bufferedWrite, kms::command::command cmd, kms::option::option opt)
 		{
-			CCharVector arBuff(3, 0);
+			CU8Vector arBuff(3, 0);
 			arBuff[0] = kms::command::iac;
 			arBuff[1] = cmd;
 			arBuff[2] = opt;

@@ -3,9 +3,8 @@
 #include "session.hpp"
 #include "Settings.h"
 
-#include <lua.hpp>
-
-#pragma comment(lib, "lual.lib")
+#include <lua5.2/lua.hpp>
+#include <fmt/format.h>
 
 static const std::string sBaseLibrary = R"gxx(
 jmc = {
@@ -64,7 +63,6 @@ lua_script_t::lua_script_t(const std::string& sCode, std::string sFunction)
 	int retval = luaL_dostring(mState, sBaseLibrary.c_str());
 	if (retval != 0) {
 		std::string error = lua_tostring(mState, -1);
-		int tt = 0;
 	}
 	lua_register(mState, "kms_server_send", kms_server_send);
 	lua_register(mState, "kms_set_variable", kms_set_variable);
@@ -72,7 +70,7 @@ lua_script_t::lua_script_t(const std::string& sCode, std::string sFunction)
 	retval = luaL_dostring(mState, sCode.c_str());
 	if (retval != 0) {
 		std::string error = lua_tostring(mState, -1);
-		int tt = 0;
+		fmt::print(stderr, "{}\n", error);
 	}
 }
 
@@ -89,9 +87,9 @@ bool lua_script_t::OnIncoming(const std::string& text)
 	int result = lua_pcall(mState, 1, LUA_MULTRET, 0);
 	if (result != 0) {
 		std::string error = lua_tostring(mState, -1);
-		int tt = 0;
+		fmt::print(stderr, "{}\n", error);
 	}
-	int retval = lua_tonumber(mState, -1);
+	int retval = static_cast<int>(lua_tonumber(mState, -1));
 	lua_pop(mState, 1);
 	return retval != 0;
 }

@@ -49,7 +49,7 @@ namespace kms {
 			return m_pResult->ai_addr;
 		}
 
-		size_t getAddrLength() const {
+		auto getAddrLength() const -> auto {
 			return m_pResult->ai_addrlen;
 		}
 	};
@@ -71,7 +71,7 @@ namespace kms {
 
 		void close() {
 			if (getIsValid()) {
-				closesocket(m_socket);
+				::closesocket(m_socket);
 				m_socket = KMS_INVALID_SOCKET;
 			}
 		}
@@ -92,7 +92,8 @@ namespace kms {
 			//straight from MSDN: https://msdn.microsoft.com/en-us/library/windows/desktop/bb530741(v=vs.85).aspx
 			struct addrinfo hints;
 
-			ZeroMemory( &hints, sizeof(hints) );
+			memset(&hints, 0, sizeof(hints));
+
 			hints.ai_family = AF_UNSPEC;
 			hints.ai_socktype = SOCK_STREAM;
 			hints.ai_protocol = IPPROTO_TCP;
@@ -110,7 +111,7 @@ namespace kms {
 				return false;
 			}
 
-			int rc = connect(m_socket, addr.getAddr(), static_cast<int>(addr.getAddrLength()));
+			int rc = connect(m_socket, addr.getAddr(), addr.getAddrLength());
 			if (rc == KMS_SOCKET_ERROR) {
 				close();
 			}
@@ -118,7 +119,7 @@ namespace kms {
 			return getIsValid();
 		}
 
-		int recv(CCharVector& data, int index = 0) {
+		auto recv(CCharVector& data, size_t index = 0) -> auto {
 			memset(&data[index], 0, data.size() - index);
 			return ::recv(m_socket, &data[index], data.size() - index, 0);
 		}
@@ -130,7 +131,7 @@ namespace kms {
 
 		int send(const CCharVector& buffer)
 		{
-			return ::send(m_socket, &buffer[0], buffer.size(), 0);
+			return static_cast<int>(::send(m_socket, &buffer[0], buffer.size(), 0));
 		}
 
 		int checkForError()

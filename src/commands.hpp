@@ -42,7 +42,9 @@ namespace kms {
 					}
 				}
 			};
-			m_tIncoming.swap(std::thread(func, std::ref(*this), std::ref(m_bufferedIncoming)));
+
+			std::thread th(func, std::ref(*this), std::ref(m_bufferedIncoming));
+			m_tIncoming.swap(th);
 		}
 
 		~commands_t()

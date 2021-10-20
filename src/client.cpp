@@ -27,7 +27,17 @@ int main(int argc, char* argv[])
 		exit(1);
 	}
 
-	int port = std::strtol(argv[2], NULL, 10);
+	int port = 0;
+
+	try {
+		port = std::stoi(argv[2]);
+	} catch(std::invalid_argument&) {
+		std::cerr << "port was malformed. client is exiting.\n";
+		exit(-1);
+	} catch(std::out_of_range&) {
+		std::cerr << "port was malformed. client is exiting.\n";
+		exit(-1);
+	}
 
 	session.connect(argv[1], port);
 	//session.connect("127.0.0.1", 4000);

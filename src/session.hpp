@@ -27,13 +27,13 @@ namespace kms {
 		
 		static void readMud(session_t& session) {
 			CCharVector data(4096, 0);
-			int index = 0;
+			size_t index = 0;
 			for(;;) {
-				::Sleep(30);
+				std::this_thread::sleep_for(std::chrono::milliseconds(30));
 				if (session.m_socket.checkForRead()) {
-					int rc = session.m_socket.recv(data, index);
+					auto rc = session.m_socket.recv(data, index);
 					if (rc > 0) {
-						index += rc;
+						index += static_cast<size_t>(rc);
 					} else if (rc == 0) {
 						//connection closed??
 					} else {
@@ -63,7 +63,7 @@ namespace kms {
 				std::string sLine;
 				if (session.m_bufferedWrite.try_pop(&sLine)) {
 					//ugly.
-					unsigned char nTest = (unsigned char)sLine[0];
+					unsigned char nTest = static_cast<unsigned char>(sLine[0]);
 					if (nTest == 255) {
 					} else {
 						sLine += "\r\n";
@@ -97,8 +97,11 @@ namespace kms {
 
 		void play()
 		{
-			m_recvThread.swap(std::thread(readMud, std::ref(*this)));
-			m_sendThread.swap(std::thread(writeMud, std::ref(*this)));
+			std::thread r(readMud, std::ref(*this));
+			std::thread w(writeMud, std::ref(*this));
+
+			m_recvThread.swap(r);
+			m_sendThread.swap(w);
 
 			std::string sInput;
 			while(1) {	
