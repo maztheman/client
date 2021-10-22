@@ -1,7 +1,17 @@
 #pragma once
 #include "utility.hpp"
 
+#include <imgui.h>
+#include <imgui-SFML.h>
+
+#include <SFML/Graphics/RenderWindow.hpp>
+#include <SFML/System/Clock.hpp>
+#include <SFML/Window/Event.hpp>
+#include <SFML/Graphics/CircleShape.hpp>
+
 namespace kms {
+
+#ifdef _WIN32
 	class console_t {
 		int							m_xCoord;
 		int							m_yCoord;
@@ -198,5 +208,81 @@ namespace kms {
 		{
 			SetCurrentConsoleFontEx(m_hPrintF, FALSE, &m_font_info);
 		}
+
+	constexpr static bool isTTY() {
+		return false;
+	}
+
 	};
+#else
+
+
+
+class console_t
+{
+	static constexpr tcflag_t ECHO_FLAG = ECHO;
+
+	termios m_termAttributes;
+	//sf::RenderWindow window;
+
+public:
+	console_t()
+	//: window(sf::VideoMode(640, 480), "mudclient")
+	{
+		/*window.setFramerateLimit(60);
+  		ImGui::SFML::Init(window);
+		sf::Clock deltaClock;
+		if (window.isOpen()) {
+
+			sf::Event event;
+			while (window.pollEvent(event)) {
+				ImGui::SFML::ProcessEvent(event);
+
+				if (event.type == sf::Event::Closed) {
+					window.close();
+				}
+			}
+
+			ImGui::SFML::Update(window, deltaClock.restart());
+
+			ImGui::Begin("Hello, world!");
+			ImGui::End();
+
+			window.clear();
+			ImGui::SFML::Render(window);
+			window.display();
+		}
+		*/
+
+		tcgetattr(STDERR_FILENO, &m_termAttributes);
+		setLocalEcho(true);
+	}
+
+	~console_t()
+	{
+		 ImGui::SFML::Shutdown();
+	}
+
+	void setLocalEcho(bool bValue) {
+		if (bValue) {
+			m_termAttributes.c_lflag |= ECHO_FLAG;
+		} else {
+			m_termAttributes.c_lflag &= ~ECHO_FLAG;
+		}
+
+		tcsetattr(STDERR_FILENO, TCSANOW, &m_termAttributes);
+	}
+
+	void writeText(const std::string& sText)
+	{
+		fmt::print(stderr, "{}", sText);
+	}
+
+	constexpr static bool isTTY() {
+		return true;
+	}
+};
+
+
+#endif
 } // end namespace kms

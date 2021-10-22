@@ -44,6 +44,7 @@ include(cmake/StaticAnalyzers.cmake)
 option(BUILD_SHARED_LIBS "Enable compilation of shared libraries" OFF)
 option(ENABLE_TESTING "Enable Test Builds" OFF)
 option(ENABLE_FUZZING "Enable Fuzzing Builds" OFF)
+option(CPP_STARTER_USE_IMGUI "Enable imGUI" ON)
 
 # Very basic PCH example
 option(ENABLE_PCH "Enable Precompiled Headers" OFF)

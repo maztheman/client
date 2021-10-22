@@ -22,9 +22,9 @@ int main(int argc, char* argv[])
 
 
 	if (argc != 3) {
-		std::cout << "client - telnet client made by maztheman 2000 - 2017" << std::endl;
-		std::cout << "client.exe <server> <port>" << std::endl;
-		exit(1);
+		std::cout << "client - telnet client made by maztheman 2000 - 2021" << std::endl;
+		std::cout << "client <server> <port>" << std::endl;
+		return 0;
 	}
 
 	int port = 0;

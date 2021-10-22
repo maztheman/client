@@ -1,18 +1,17 @@
 #pragma once
-#include "concurrent_queue.hpp"
 #include <regex>
 #include <map>
 #include <thread>
-#include "readerwriterqueue.h"
+#include "concurrentqueue.h"
 #include "lua_script.h"
 
 namespace kms {
 	class commands_t 
 	{
-		typedef concurrent_queue<std::string> queue_type;
-		typedef moodycamel::ReaderWriterQueue<std::string> new_queue_type;
-		typedef std::map<std::string, std::string> map_type;
-		typedef std::vector<lua_script_t*> lua_script_v;
+		using queue_type = moodycamel::ConcurrentQueue<std::string>;
+		using new_queue_type = moodycamel::ConcurrentQueue<std::string>;
+		using map_type = std::map<std::string, std::string>;
+		using lua_script_v = std::vector<lua_script_t*>;
 
 		queue_type&	m_bufferedWrite;
 		map_type	m_variables;

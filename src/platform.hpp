@@ -6,6 +6,7 @@
 //this header is clearly for windows
 #include <winsock2.h>
 #include <Ws2tcpip.h>
+#include <fmt/format.h>
 #pragma comment (lib, "WS2_32.lib")
 
 namespace kms {
@@ -46,8 +47,10 @@ namespace kms {
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <netdb.h>
+#include <termios.h>
 #include <unistd.h>
 #include <cstring>
+#include <fmt/format.h>
 
 namespace kms {
 	class socket_init

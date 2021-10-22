@@ -1,7 +1,7 @@
 #pragma once
 #include "socket.hpp"
 #include "telnet.hpp"
-#include "concurrent_queue.hpp"
+#include "concurrentqueue.h"
 #include "console.hpp"
 #include "commands.hpp"
 #include "Settings.h"
@@ -13,12 +13,12 @@
 namespace kms {
 
 	class session_t {
-		typedef std::vector<lua_script_t*> lua_script_v;
-
+		using lua_script_v = std::vector<lua_script_t*>;
+		using queue_type = moodycamel::ConcurrentQueue<std::string>;
 
 		kms::socket_t					m_socket;
 		kms::telnet_t					m_telnet;
-		concurrent_queue<std::string>	m_bufferedWrite;
+		queue_type						m_bufferedWrite;
 		console_t						m_console;
 		commands_t						m_commands;
 		std::thread						m_recvThread;
@@ -61,13 +61,18 @@ namespace kms {
 
 				//dont care about CoW...
 				std::string sLine;
-				if (session.m_bufferedWrite.try_pop(&sLine)) {
-					//ugly.
-					unsigned char nTest = static_cast<unsigned char>(sLine[0]);
-					if (nTest == 255) {
+
+				if (session.m_bufferedWrite.try_dequeue(sLine)) {
+					if (sLine.empty() == false) {
+						unsigned char nTest = static_cast<unsigned char>(sLine[0]);
+						if (nTest == 255) {
+						} else {
+							sLine += "\r\n";
+						}
 					} else {
 						sLine += "\r\n";
 					}
+
 					session.m_socket.send(sLine);
 				}
 			}
@@ -92,7 +97,7 @@ namespace kms {
 
 		void SendToServer(std::string sText)
 		{
-			m_bufferedWrite.push(sText);
+			m_bufferedWrite.enqueue(sText);
 		}
 
 		void play()
@@ -107,7 +112,7 @@ namespace kms {
 			while(1) {	
 				std::getline(std::cin, sInput);
 				if (sInput == "exit") {
-					m_bufferedWrite.push("quit");
+					m_bufferedWrite.enqueue("quit");
 					break;
 				} else if (sInput == "/reload") {
 					Settings::ReadInit();
@@ -123,7 +128,7 @@ namespace kms {
 				}
 
 				if (rc == false) {
-					m_bufferedWrite.push(sInput);
+					m_bufferedWrite.enqueue(sInput);
 				}
 			}
 		}
