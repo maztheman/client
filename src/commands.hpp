@@ -3,7 +3,7 @@
 #include <map>
 #include <thread>
 #include "concurrentqueue.h"
-#include "lua_script.h"
+//#include "lua_script.h"
 
 namespace kms {
 	class commands_t 
@@ -11,13 +11,14 @@ namespace kms {
 		using queue_type = moodycamel::ConcurrentQueue<std::string>;
 		using new_queue_type = moodycamel::ConcurrentQueue<std::string>;
 		using map_type = std::map<std::string, std::string>;
-		using lua_script_v = std::vector<lua_script_t*>;
+		//using lua_script_v = std::vector<lua_script_t*>;
 
 		queue_type&	m_bufferedWrite;
 		map_type	m_variables;
-		lua_script_v m_IncomingScripts;
+		//lua_script_v m_IncomingScripts;
 		std::thread m_tIncoming;
 		new_queue_type	m_bufferedIncoming;
+		std::atomic_bool m_Continue{true};
 
 		std::string GetSimpleMob(std::string sMob)
 		{
@@ -32,23 +33,27 @@ namespace kms {
 			: m_bufferedWrite(bufferedWrite)
 			, m_bufferedIncoming(100U)
 		{
-			auto func = [this](commands_t& This, new_queue_type& bufferedIncoming) {
+			const auto func = [this]() {
 				std::string sText;
 				sText.reserve(4096);
-				for (;;) {
-					if (bufferedIncoming.try_dequeue(sText)) {
-						This.OnIncoming(sText);
+				for (;m_Continue;) {
+					if (m_bufferedIncoming.try_dequeue(sText)) {
+						OnIncoming(sText);
 					}
 				}
 			};
 
-			std::thread th(func, std::ref(*this), std::ref(m_bufferedIncoming));
+			std::thread th(func);
 			m_tIncoming.swap(th);
 		}
 
 		~commands_t()
 		{
 			ResetScripts();
+			if (m_tIncoming.joinable())
+			{
+				m_tIncoming.join();
+			}
 		}
 
 		map_type& Variables() {
@@ -57,19 +62,26 @@ namespace kms {
 
 		void AddScripts(const std::string& sCode, std::string sFunction)
 		{
-			m_IncomingScripts.push_back(new lua_script_t(sCode, sFunction));
+			//m_IncomingScripts.push_back(new lua_script_t(sCode, sFunction));
 		}
 
 		void ResetScripts()
 		{
-			for (auto& p : m_IncomingScripts) {
+			/*for (auto& p : m_IncomingScripts) {
 				delete p;
 			}
-			m_IncomingScripts.clear();
+			m_IncomingScripts.clear();*/
 		}
 
 		void AddIncoming(std::string sText) {
 			m_bufferedIncoming.enqueue(sText);
 		}
+
+		void Close()
+		{
+			m_Continue = false;
+		}
+
+		
 	};
 }

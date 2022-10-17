@@ -1,6 +1,5 @@
 #pragma once
 
-#include "targetver.h"
 #include "platform.hpp"
 
 #include <cstdio>

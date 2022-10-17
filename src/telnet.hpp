@@ -1,7 +1,7 @@
 #pragma once
 #include "socket.hpp"
 #include "concurrentqueue.h"
-#include "console.hpp"
+#include "console_session.h"
 #include <algorithm>
 #include <sstream>
 #include "utility.hpp"
@@ -152,7 +152,7 @@ namespace kms {
 		{
 		}
 
-		size_t process(CCharVector& data, size_t size, console_t& console, commands_t& command, queue_type& bufferedWrite)
+		size_t process(CCharVector& data, size_t size, console_session_t& console, commands_t& command, queue_type& bufferedWrite)
 		{
 			//deal with the telnet stuffs. then move on.
 			//ignore gracefully, for now....
@@ -209,7 +209,8 @@ namespace kms {
 		template<typename CONSOLE_TYPE>
 		size_t processConsole(CCharVector& data, CONSOLE_TYPE& console, commands_t& command)
 		{
-			if constexpr (CONSOLE_TYPE::isTTY()) {
+			if constexpr (CONSOLE_TYPE::isTTY()) 
+			{
 				std::string text(data.begin(), data.end());
 				console.writeText(text);
 				command.AddIncoming(text);
