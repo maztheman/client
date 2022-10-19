@@ -3,9 +3,12 @@
 #include "session.hpp"
 #include <fstream>
 #include <sstream>
+#include <filesystem>
 
-std::string Settings::Dir;
-std::string Settings::IniFile;
+#include <yaml-cpp/yaml.h>
+
+std::filesystem::path Settings::Dir;
+std::filesystem::path Settings::IniFile;
 
 Settings::Settings()
 {
@@ -16,23 +19,38 @@ Settings::~Settings()
 {
 }
 
-static std::string ReadToFile(std::string file)
+static std::string ReadToFile(std::filesystem::path file)
 {
-	std::ifstream t(file.c_str());
+	std::ifstream t(file);
 	std::string str((std::istreambuf_iterator<char>(t)),
 		std::istreambuf_iterator<char>());
 	return str;
 }
 
-void Settings::ReadInit()
+void Settings::ReadInit(kms::session_t* session)
 {
-	std::fstream ini(IniFile.c_str(), std::ios::in);
+
+	std::ifstream t(IniFile);
+	YAML::Node doc = YAML::Load(t);
+
+
+	const auto& val =  doc["incoming"];
+	if (val.IsSequence())
+	{
+		for(auto& scripts : val)
+		{
+			session->Commands().AddScripts(session, ReadToFile(Dir / scripts.as<std::string>()), "incoming");
+		}
+	}
+	
+
+	/*std::fstream ini(IniFile, std::ios::in);
 	if (!ini) {
 		return;
 	}
 
-	Session().ResetAlias();
-	Session().Commands().ResetScripts();
+	session->ResetAlias();
+	session->Commands().ResetScripts();
 
 	std::string line;
 	while (std::getline(ini, line)) {
@@ -44,10 +62,10 @@ void Settings::ReadInit()
 		std::getline(verbSS, file, ',');
 		std::getline(verbSS, function, ',');
 		if (verb == "alias") {
-			Session().AddAlias(ReadToFile(Dir + file), function);
+			//session->AddAlias(ReadToFile(Dir / file), function);
 		} else if (verb == "incoming") {
-			Session().Commands().AddScripts(ReadToFile(Dir + file), function);
+			session->Commands().AddScripts(session, ReadToFile(Dir / file), function);
 		}
-	}
+	}*/
 
 }

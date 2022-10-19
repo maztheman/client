@@ -18,6 +18,7 @@ console_session_t::~console_session_t()
 void console_session_t::writeText(std::string text)
 {
     m_texts.add(std::move(text));
+    m_scrollToBottom = true;
 }
 
 console_session_t::ro_strings& console_session_t::readText(ro_strings& texts) const

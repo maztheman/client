@@ -1,5 +1,10 @@
 #pragma once
 #include <string>
+#include <filesystem>
+
+namespace kms {
+	class session_t;
+}
 
 class Settings
 {
@@ -8,10 +13,10 @@ class Settings
 	~Settings();
 public:
 
-	static std::string Dir;
-	static std::string IniFile;
+	static std::filesystem::path Dir;
+	static std::filesystem::path IniFile;
 
-	static void ReadInit();
+	static void ReadInit(kms::session_t* session);
 
 };
 

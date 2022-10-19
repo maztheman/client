@@ -9,6 +9,7 @@ glfw/3.3.8
 fmt/9.1.0
 imgui/cci.20220621+1.88.docking
 sol2/3.3.0
+yaml-cpp/0.7.0
 
 [generators]
 cmake_find_package_multi

@@ -3,7 +3,9 @@
 #include <map>
 #include <thread>
 #include "concurrentqueue.h"
-//#include "lua_script.h"
+#include "lua_script.h"
+
+#include "protected_vector.h"
 
 namespace kms {
 	class commands_t 
@@ -11,11 +13,12 @@ namespace kms {
 		using queue_type = moodycamel::ConcurrentQueue<std::string>;
 		using new_queue_type = moodycamel::ConcurrentQueue<std::string>;
 		using map_type = std::map<std::string, std::string>;
-		//using lua_script_v = std::vector<lua_script_t*>;
+		using lua_script_v = protected_vector_t<lua_script_t>;
+		using out_script_v = std::vector<lua_script_t*>;
 
 		queue_type&	m_bufferedWrite;
 		map_type	m_variables;
-		//lua_script_v m_IncomingScripts;
+		lua_script_v m_IncomingScripts;
 		std::thread m_tIncoming;
 		new_queue_type	m_bufferedIncoming;
 		std::atomic_bool m_Continue{true};
@@ -50,6 +53,7 @@ namespace kms {
 		~commands_t()
 		{
 			ResetScripts();
+			m_Continue = false;
 			if (m_tIncoming.joinable())
 			{
 				m_tIncoming.join();
@@ -60,20 +64,18 @@ namespace kms {
 			return m_variables;
 		}
 
-		void AddScripts(const std::string& sCode, std::string sFunction)
+		void AddScripts(session_t* session, const std::string& sCode, std::string sFunction)
 		{
-			//m_IncomingScripts.push_back(new lua_script_t(sCode, sFunction));
+			m_IncomingScripts.add(std::make_unique<lua_script_t>(sCode, sFunction, session));
 		}
 
 		void ResetScripts()
 		{
-			/*for (auto& p : m_IncomingScripts) {
-				delete p;
-			}
-			m_IncomingScripts.clear();*/
+			m_IncomingScripts.clear();
 		}
 
-		void AddIncoming(std::string sText) {
+		void AddIncoming(std::string sText) 
+		{
 			m_bufferedIncoming.enqueue(sText);
 		}
 

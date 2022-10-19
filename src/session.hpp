@@ -3,8 +3,8 @@
 #include "telnet.hpp"
 #include "concurrentqueue.h"
 #include "console_session.h"
-//#include "commands.hpp"
-//#include "Settings.h"
+#include "commands.hpp"
+#include "Settings.h"
 
 #include <iostream>
 #include <thread>
@@ -15,7 +15,7 @@ namespace kms {
 
 	class session_t 
 	{
-		//using lua_script_v = std::vector<lua_script_t*>;
+		using lua_script_v = protected_vector_t<lua_script_t>;
 		using queue_type = moodycamel::ConcurrentQueue<std::string>;
 
 		kms::socket_t					m_socket;
@@ -27,6 +27,8 @@ namespace kms {
 		std::thread						m_sendThread;
 		std::array<char, 256>			m_inputBuffer;
 		//lua_script_v					m_aliases;
+		std::atomic_bool				m_IsDeleted{false};
+		
 		
 		static void readMud(session_t& session) {
 			CCharVector data(4096, 0);
@@ -84,6 +86,23 @@ namespace kms {
 			fmt::print(stderr, "write thread closed [{}]\n", session.m_console.getSessionName());
 		}
 
+		static void ticker(queue_type& inputQueue, std::atomic_bool& bShouldContinue)
+		{
+			for(;bShouldContinue;)
+			{
+				for(int i = 0;bShouldContinue && i < 50; i++)
+				{//its like this so on close we dont wait full 5s to die
+					std::this_thread::sleep_for(std::chrono::milliseconds(100));
+				}
+
+				if (bShouldContinue)
+				{
+					inputQueue.enqueue("");
+				}
+			}
+			fmt::print(stderr, "[ticker] closed\n");
+		}
+
 	public:
 		using ro_strings = console_session_t::ro_strings;
 
@@ -91,7 +110,7 @@ namespace kms {
 		: m_console(sessionName)
 		, m_commands(m_bufferedWrite)
 		{
-
+			Settings::ReadInit(this);
 		}
 
 		~session_t() 
@@ -124,9 +143,9 @@ namespace kms {
 			m_console.setInput(sText);
 		}
 
-		void readText(ro_strings& texts)
+		ro_strings& readText(ro_strings& texts)
 		{
-			m_console.readText(texts);
+			return m_console.readText(texts);
 		}
 
 		const std::string& getSessionName() const
@@ -145,6 +164,11 @@ namespace kms {
 			return m_inputBuffer;
 		} 
 
+		std::atomic_bool& scrollToBottom()
+		{
+			return m_console.scrollToBottom();
+		}
+
 		void play()
 		{
 			std::thread r(readMud, std::ref(*this));
@@ -152,6 +176,10 @@ namespace kms {
 
 			m_recvThread.swap(r);
 			m_sendThread.swap(w);
+
+			std::atomic_bool bShouldContinue{true};
+
+			//std::thread tickerThread(ticker, std::ref(m_console.inputQueue), std::ref(bShouldContinue));
 
 			std::string sInput;
 			while(1) 
@@ -162,7 +190,8 @@ namespace kms {
 						m_bufferedWrite.enqueue("quit");
 						break;
 					} else if (sInput == "/reload") {
-						//Settings::ReadInit();
+						m_commands.ResetScripts();
+						Settings::ReadInit(this);
 						continue;
 					}
 
@@ -182,9 +211,16 @@ namespace kms {
 				std::this_thread::sleep_for(std::chrono::milliseconds(30));
 			}
 
+			bShouldContinue = false;
+
 			std::this_thread::sleep_for(std::chrono::milliseconds(30));
 
 			m_socket.close();
+
+			/*if (tickerThread.joinable())
+			{
+				tickerThread.join();
+			}*/
 		}
 
 		void AddAlias(const std::string& sCode, std::string sFunction)
@@ -207,9 +243,9 @@ namespace kms {
 			return m_commands;
 		}
 
-		bool isConnected() const 
+		std::atomic_bool& isDeleted() 
 		{
-			return m_socket.getIsValid();
+			return m_IsDeleted;
 		}
 	private:
 
@@ -218,9 +254,4 @@ namespace kms {
 	};
 
 
-}
-
-inline kms::session_t& Session() {
-	extern kms::session_t session;
-	return session;
 }

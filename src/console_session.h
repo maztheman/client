@@ -37,16 +37,19 @@ public:
 		return m_sessionName;
 	}
 
+	std::atomic_bool& scrollToBottom()
+	{
+		return m_scrollToBottom;
+	}
+
 	moodycamel::ConcurrentQueue<std::string> inputQueue;
 
 private:
-
-	
-
 	std::string m_sessionName;
 	base_protected_vector_t<std::string> m_texts;
 	bool m_localEcho{false};
 	std::string m_input;
+	std::atomic_bool m_scrollToBottom{true};
 };
 
 }

@@ -26,12 +26,17 @@ static std::vector<std::string> to_vector(std::string s, std::string token)
 
 void kms::commands_t::OnIncoming(std::string sIncoming)
 {
-	/*auto lines = to_vector(sIncoming, "\n\r");
+	auto lines = to_vector(sIncoming, "\r\n");
 	for (auto& line : lines) {
-		for (auto& script : m_IncomingScripts) {
-			if (script->OnIncoming(line)) {
-				break;
+
+		if (out_script_v incomingScripts; !m_IncomingScripts.get(incomingScripts).empty())
+		{
+			for (auto& script : incomingScripts) 
+			{
+				if (script->OnIncoming(line)) {
+					break;
+				}
 			}
 		}
-	}*/
+	}
 }

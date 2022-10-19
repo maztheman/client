@@ -46,11 +46,11 @@ console_t::~console_t()
 
 //session should probably own console_session_t, and we have an vector of sessions, and a thread that 
 
-static void startSession(session_t* session, std::string serverAddr, int port, std::function<void(session_t*)> endCallback) 
+static void startSession(session_t* session, std::string serverAddr, int port, protected_vector_t<session_t>* sessions) 
 {
     session->play();
     fmt::print(stderr, "session closed [{}:{}]\n", serverAddr, port);
-    endCallback(session);
+    session->isDeleted() = true;
 }
 
 
@@ -94,6 +94,8 @@ void console_t::run()
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+
+         auto sz = ImGui::CalcTextSize("01234567890123456789012345678901234567890123456789012345678901234567890123456789");
         
         if (ImGui::BeginMainMenuBar())
         {
@@ -102,7 +104,8 @@ void console_t::run()
                 if (ImGui::MenuItem("Connect", nullptr, &show_connect))
                 {
                     memset(server, 0, 256);
-                    server_port = 3000;
+                    strcpy(server, "127.0.0.1");
+                    server_port = 4010;
                 }
                 ImGui::EndMenu();
             }
@@ -151,9 +154,7 @@ void console_t::run()
 
                 if (pSession->connect(server, server_port))
                 {
-                    m_SessionThreads.emplace_back(startSession, pSession.get(), server, server_port, [&cs = m_ConsoleSessions](session_t* session) {
-                        cs.remove(session);
-                    });
+                    m_SessionThreads.emplace_back(startSession, pSession.get(), server, server_port, &m_ConsoleSessions);
                     m_ConsoleSessions.add(std::move(pSession));
                     writeText("Connected");
                 }
@@ -182,24 +183,32 @@ void console_t::run()
 
         for(std::vector<session_t*> consoleSessions; auto* cs : m_ConsoleSessions.get(consoleSessions))
         {
-            ro_strings consoleText;
-            cs->readText(consoleText);
-            //TODO: add the open boolean to the console_session_t class, so we can close it ?, should execute a "exit" input
-            if (ImGui::Begin(fmt::format("##{:p}", (void*)cs).c_str(), nullptr, ImGuiWindowFlags_NoTitleBar))
+            if (cs->isDeleted())
             {
-                if (ImGui::BeginChild(1U, ImVec2(0.0f, -1.0f * (ImGui::GetTextLineHeightWithSpacing() + 6.0f)), false, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysVerticalScrollbar))
+                continue;
+            }
+
+            if (ImGui::Begin(fmt::format("##{:p}", static_cast<void*>(cs)).c_str(), nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysAutoResize))
+            {
+                if (ImGui::BeginChild(1U, ImVec2(sz.x, 30.0f * (ImGui::GetTextLineHeightWithSpacing())), false, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysVerticalScrollbar))
                 {
-                    for(const auto* line : consoleText)
+                    for(ro_strings consoleText; const auto* line : cs->readText(consoleText))
                     {
                         ImGui::Text("%s", line->c_str());
                     }
-                    ImGui::SetScrollHereY();
+
+
+                    if (cs->scrollToBottom() || (ImGui::GetScrollY() >= ImGui::GetScrollMaxY()))
+                    {
+                        ImGui::SetScrollHereY(1.0f);
+                        cs->scrollToBottom() = false;
+                    }
+
                     ImGui::EndChild();
                 }
-
                 auto& inputBuf = cs->getInputBuffer();
 
-                if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0))
+                if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows) && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0) && !ImGui::IsItemHovered())
                     ImGui::SetKeyboardFocusHere(0);
 
                 ImGui::PushItemWidth(-1.0f);
@@ -214,7 +223,6 @@ void console_t::run()
 
         if (show_demo_window)
             ImGui::ShowDemoWindow(&show_demo_window);
-        //we need a "connect to this address option"
 
         //swap buffer
         // Rendering
